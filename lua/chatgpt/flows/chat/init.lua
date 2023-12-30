@@ -1,5 +1,6 @@
 local Session = require("chatgpt.flows.chat.session")
 local Prompts = require("chatgpt.prompts")
+local Assistants = require("chatgpt.assistants")
 local Chat = require("chatgpt.flows.chat.base")
 
 local M = {
@@ -33,10 +34,20 @@ M.open_with_awesome_prompt = function()
 end
 
 M.open_with_assistant = function()
-  local chat = Chat:new()
-  chat:open()
-  chat.chat_window.border:set_text("top", " ChatGPT - Assistant ", "center")
-  chat:open_system_panel()
+  Assistants.selectAssistant({
+    cb = vim.schedule_wrap(function(assistant, prompt)
+      -- create new named session
+      local session = Session.new({ name = assistant })
+      session:save()
+
+      local chat = Chat:new()
+      chat:open()
+      chat.chat_window.border:set_text("top", " ChatGPT - Assistant " .. assistant .. " ", "center")
+
+      chat:set_system_message(prompt)
+      chat:open_system_panel()
+    end),
+  })()
 end
 
 return M

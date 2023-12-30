@@ -175,6 +175,7 @@ function M.defaults()
     actions_paths = {},
     show_quickfixes_cmd = "Trouble quickfix",
     predefined_chat_gpt_prompts = "https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv",
+    assistants_base_url ="https://api.openai.com/v1/assistants",
     highlights = {
       help_key = "@symbol",
       help_description = "@comment",
