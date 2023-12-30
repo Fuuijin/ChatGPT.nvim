@@ -32,4 +32,11 @@ M.open_with_awesome_prompt = function()
   })
 end
 
+M.open_with_assistant = function()
+  local chat = Chat:new()
+  chat:open()
+  chat.chat_window.border:set_text("top", " ChatGPT - Assistant ", "center")
+  chat:open_system_panel()
+end
+
 return M

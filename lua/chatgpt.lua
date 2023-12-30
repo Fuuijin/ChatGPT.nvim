@@ -49,7 +49,7 @@ end
 M.complete_code = module.complete_code
 
 M.openChatWithAssistant = function ()
-   print("openChatWithAssistant")
+   module.open_chat_with_assistant()
 end
 
 return M
