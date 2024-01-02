@@ -1,3 +1,5 @@
+local conf = require("telescope.config").values
+
 local M = {}
 
 local ESC_FEEDKEY = vim.api.nvim_replace_termcodes("<ESC>", true, false, true)
@@ -144,6 +146,30 @@ function M.match_indentation(input, output)
     end
   end
   return table.concat(lines)
+end
+
+function M.defaulter(f, default_opts)
+  default_opts = default_opts or {}
+  return {
+    new = function(opts)
+      if conf.preview == false and not opts.preview then
+        return false
+      end
+      opts.preview = type(opts.preview) ~= "table" and {} or opts.preview
+      if type(conf.preview) == "table" then
+        for k, v in pairs(conf.preview) do
+          opts.preview[k] = vim.F.if_nil(opts.preview[k], v)
+        end
+      end
+      return f(opts)
+    end,
+    __call = function()
+      local ok, err = pcall(f(default_opts))
+      if not ok then
+        error(debug.traceback(err))
+      end
+    end,
+  }
 end
 
 return M

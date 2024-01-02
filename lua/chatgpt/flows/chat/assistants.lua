@@ -1,38 +1,15 @@
 local pickers = require("telescope.pickers")
-local conf = require("telescope.config").values
+local previewers = require("telescope.previewers")
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
-local previewers = require("telescope.previewers")
+local conf = require("telescope.config").values
 local job = require("plenary.job")
 
 local Utils = require("chatgpt.utils")
 local Config = require("chatgpt.config")
+local Api = require("chatgpt.api")
 
-local function defaulter(f, default_opts)
-  default_opts = default_opts or {}
-  return {
-    new = function(opts)
-      if conf.preview == false and not opts.preview then
-        return false
-      end
-      opts.preview = type(opts.preview) ~= "table" and {} or opts.preview
-      if type(conf.preview) == "table" then
-        for k, v in pairs(conf.preview) do
-          opts.preview[k] = vim.F.if_nil(opts.preview[k], v)
-        end
-      end
-      return f(opts)
-    end,
-    __call = function()
-      local ok, err = pcall(f(default_opts))
-      if not ok then
-        error(debug.traceback(err))
-      end
-    end,
-  }
-end
-
-local display_content_wrapped = defaulter(function(_)
+local display_content_wrapped = Utils.defaulter(function(_)
   return previewers.new_buffer_previewer({
     define_preview = function(self, entry, status)
       local width = vim.api.nvim_win_get_width(self.state.winid)
@@ -43,18 +20,26 @@ end, {})
 
 local function preview_command(entry, bufnr, width)
   vim.api.nvim_buf_call(bufnr, function()
-    local preview = Utils.wrapTextToTable(entry.value, width - 5)
-    table.insert(preview, 1, "---")
-    table.insert(preview, 1, entry.display)
+    local preview = Utils.wrapTextToTable(entry.information.instructions, width - 5)
+    table.insert(preview, 1, "Instructions:")
+    table.insert(preview, 1, "Name: " .. entry.information.name)
+    table.insert(preview, 1, "Id: " .. entry.information.id)
+    table.insert(preview, 1, "Model: " .. entry.information.model)
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, preview)
   end)
 end
 
 local function entry_maker(entry)
   return {
-    value = entry.prompt,
-    display = entry.act,
-    ordinal = entry.act,
+    display = entry.name,
+    value = entry.id,
+    information = {
+      id = entry.id,
+      name = entry.name,
+      instructions = entry.instructions,
+      model = entry.model,
+    },
+    ordinal = entry.id,
     preview_command = preview_command,
   }
 end
@@ -87,7 +72,13 @@ local finder = function(opts)
           :new({
             command = "curl",
             args = {
-              opts.url,
+              Api.ASSISTANTS_URL,
+              "-H",
+              "Content-Type: application/json",
+              "-H",
+              Api.AUTHORIZATION_HEADER,
+              "-H",
+              "OpenAI-Beta: assistants=v1",
             },
             on_exit = vim.schedule_wrap(function(j, exit_code)
               if exit_code ~= 0 then
@@ -95,21 +86,18 @@ local finder = function(opts)
                 process_complete()
               end
 
-              local response = table.concat(j:result(), "\n")
-              local lines = {}
-              for line in string.gmatch(response, "[^\n]+") do
-                local act, _prompt = string.match(line, '"(.*)","(.*)"')
-                if act ~= "act" and act ~= nil then
-                  _prompt = string.gsub(_prompt, '""', '"')
-                  table.insert(lines, { act = act, prompt = _prompt })
-                end
-              end
+              local parsed_response = vim.fn.json_decode(table.concat(j:result(), "\n"))
 
-              for _, line in ipairs(lines) do
-                local v = entry_maker(line)
-                num_results = num_results + 1
-                results[num_results] = v
-                process_result(v)
+              local lines = {}
+
+              for _, entry in ipairs(parsed_response.data) do
+                if entry.name then -- Only include entries with a name
+                  local v = entry_maker(entry)
+                  num_results = num_results + 1
+                  results[num_results] = v
+                  process_result(v)
+                  table.insert(lines, entry_maker(entry))
+                end
               end
 
               process_complete()
@@ -132,11 +120,11 @@ function M.selectAssistant(opts)
       layout_config = {
         height = 0.5,
       },
-      results_title = "ChatGPT Assistants",
+      results_title = "ChatGPT Assistants...",
       prompt_prefix = Config.options.popup_input.prompt,
       selection_caret = Config.options.chat.answer_sign .. " ",
       prompt_title = "Prompt",
-      finder = finder({ url = Config.options.predefined_chat_gpt_prompts }),
+      finder = finder(),
       sorter = conf.generic_sorter(opts),
       previewer = display_content_wrapped.new({}),
       attach_mappings = function(prompt_bufnr)

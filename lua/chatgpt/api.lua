@@ -4,6 +4,20 @@ local logger = require("chatgpt.common.logger")
 
 local Api = {}
 
+function Api.create_assistant(custom_params, cb)
+  local params = vim.tbl_extend("keep", custom_params, Config.options.openai_assistants_params)
+  Api.make_call_beta(Api.ASSISTANTS_URL, params, cb)
+end
+
+function Api.list_assistants()
+  Api.make_call_beta(Api.ASSISTANTS_URL, {}, {})
+end
+
+function Api.create_assistant_file(custom_params, cb)
+  local params = vim.tbl_extend("keep", custom_params, Config.options.openai_assistants_params)
+  Api.make_call_beta(Api.FILES_URL, params, cb)
+end
+
 function Api.completions(custom_params, cb)
   local params = vim.tbl_extend("keep", custom_params, Config.options.openai_params)
   Api.make_call(Api.COMPLETIONS_URL, params, cb)
@@ -85,6 +99,37 @@ function Api.edits(custom_params, cb)
 
   Api.make_call(Api.CHAT_COMPLETIONS_URL, params, cb)
 end
+
+function Api.make_call_beta(url, params, cb)
+  TMP_MSG_FILENAME = os.tmpname()
+  local f = io.open(TMP_MSG_FILENAME, "w+")
+  if f == nil then
+    vim.notify("Cannot open temporary message file: " .. TMP_MSG_FILENAME, vim.log.levels.ERROR)
+    return
+  end
+  f:write(vim.fn.json_encode(params))
+  f:close()
+  Api.job = job
+    :new({
+      command = "curl",
+      args = {
+        url,
+        "-H",
+        "Content-Type: application/json",
+        "-H",
+        Api.AUTHORIZATION_HEADER,
+        "-H",
+        "OpenAI-Beta: assistants=v1",
+        "-d",
+        "@" .. TMP_MSG_FILENAME,
+      },
+      on_exit = vim.schedule_wrap(function(response, exit_code)
+        Api.handle_response(response, exit_code, cb)
+      end),
+    })
+    :start()
+end
+
 
 function Api.make_call(url, params, cb)
   TMP_MSG_FILENAME = os.tmpname()
@@ -269,6 +314,8 @@ function Api.setup()
     Api.COMPLETIONS_URL = ensureUrlProtocol(Api.OPENAI_API_HOST .. "/v1/completions")
     Api.CHAT_COMPLETIONS_URL = ensureUrlProtocol(Api.OPENAI_API_HOST .. "/v1/chat/completions")
     Api.EDITS_URL = ensureUrlProtocol(Api.OPENAI_API_HOST .. "/v1/edits")
+    Api.ASSISTANTS_URL = ensureUrlProtocol(Api.OPENAI_API_HOST .. "/v1/assistants")
+    Api.THREADS_URL = ensureUrlProtocol(Api.OPENAI_API_HOST .. "/v1/threads")
   end, "api.openai.com")
 
   loadApiKey("OPENAI_API_KEY", "OPENAI_API_KEY", "api_key_cmd", function(value)

@@ -48,8 +48,8 @@ end
 
 M.complete_code = module.complete_code
 
-M.openChatWithAssistant = function ()
-   module.open_chat_with_assistant()
+M.openChatWithAssistant = function()
+  module.open_chat_with_assistant()
 end
 
 return M

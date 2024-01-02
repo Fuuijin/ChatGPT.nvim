@@ -26,6 +26,7 @@ local function read_session_file(filename)
 
   local jsonString = file:read("*a")
   file:close()
+  vim.notify(jsonString)
 
   local data = vim.json.decode(jsonString)
   return data.name, data.updated_at

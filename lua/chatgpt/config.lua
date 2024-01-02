@@ -171,11 +171,15 @@ function M.defaults()
       top_p = 1,
       n = 1,
     },
+    openai_assistants_params = {
+      url = "https://api.openai.com/v1/assistants?order=desc&limit=20",
+      instructions = "You are a helpful programming assistant",
+      model = "gpt-4-1106-preview",
+    },
     use_openai_functions_for_edits = false,
     actions_paths = {},
     show_quickfixes_cmd = "Trouble quickfix",
     predefined_chat_gpt_prompts = "https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv",
-    assistants_base_url ="https://api.openai.com/v1/assistants",
     highlights = {
       help_key = "@symbol",
       help_description = "@comment",
