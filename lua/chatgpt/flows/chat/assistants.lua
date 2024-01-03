@@ -131,7 +131,7 @@ function M.selectAssistant(opts)
         actions.select_default:replace(function()
           actions.close(prompt_bufnr)
           local selection = action_state.get_selected_entry()
-          opts.cb(selection.display, selection.value)
+          opts.cb(selection.information.name, selection.information.instructions, selection.information.id)
         end)
         return true
       end,

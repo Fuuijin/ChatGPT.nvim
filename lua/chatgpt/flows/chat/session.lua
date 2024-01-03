@@ -26,7 +26,6 @@ local function read_session_file(filename)
 
   local jsonString = file:read("*a")
   file:close()
-  vim.notify(jsonString)
 
   local data = vim.json.decode(jsonString)
   return data.name, data.updated_at
@@ -40,6 +39,8 @@ function Session:init(opts)
   else
     local dt = get_current_date()
     self.name = opts.name or dt
+    self.assistant_id = opts.assistant_id or ""
+    self.thread_id = opts.thread_id or ""
     self.updated_at = dt
     self.filename = Session.get_dir():joinpath(get_default_filename() .. ".json"):absolute()
     self.conversation = {}
@@ -59,6 +60,8 @@ end
 function Session:to_export()
   return {
     name = self.name,
+    assistant_id = self.assistant_id,
+    thread_id = self.thread_id,
     updated_at = self.updated_at,
     settings = self.settings,
     conversation = self.conversation,
@@ -125,6 +128,8 @@ function Session:load()
   self.name = data.name
   self.updated_at = data.updated_at or get_current_date()
   self.settings = data.settings
+  self.thread_id = data.thread_id
+  self.assistant_id = data.assistant_id
   self.conversation = data.conversation
 end
 

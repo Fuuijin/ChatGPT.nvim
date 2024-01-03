@@ -18,6 +18,10 @@ function Api.create_assistant_file(custom_params, cb)
   Api.make_call_beta(Api.FILES_URL, params, cb)
 end
 
+function Api.create_thread(cb)
+  Api.make_call_beta(Api.THREADS_URL, {}, cb)
+end
+
 function Api.completions(custom_params, cb)
   local params = vim.tbl_extend("keep", custom_params, Config.options.openai_params)
   Api.make_call(Api.COMPLETIONS_URL, params, cb)
@@ -172,6 +176,8 @@ Api.handle_response = vim.schedule_wrap(function(response, exit_code, cb)
     cb("No Response.")
   elseif json.error then
     cb("// API ERROR: " .. json.error.message)
+  elseif json.object == "thread" then
+    cb(json.id)
   else
     local message = json.choices[1].message
     if message ~= nil then
